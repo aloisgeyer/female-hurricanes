@@ -16,8 +16,9 @@ data[,"MFI"]=data[,"MasFem"]
 data[,"ZMFI"]=data[,"ZMasFem"]
 data[,"ZMP"]=data[,"ZMinPressure_A"]
 data[,"Gender_MF"]=factor(data[,"Gender_MF"],labels=c("male","female"))
+data[,"Category"]=factor(data[,"Category"])
 
-vars=c("alldeaths","MFI","MP","Category","NDAM","ZMFI","ZMP","ZNDAM")
+vars=c("alldeaths","MFI","MP","NDAM","ZMFI","ZMP","ZNDAM")
 
 # descriptives ####
 summary(data[,vars])
@@ -187,53 +188,3 @@ malter.4=glm.nb(alldeaths~MP+NDAM+MP*NDAM+MFI+MFI*MP+MFI*NDAM,data=data,
                 control=glm.control(epsilon=1e-3,maxit=1000,trace=F)) # CANNOT FIND a SETTING that CONVERGES! 
 # summary(malter.4)
 # lrtest(model.0,malter.4)
-
-# alternative models ####
-# LOGS of alldeaths ####
-model.0.log=lm(log(1+alldeaths)~1,data=data)
-model.1.log=lm(log(1+alldeaths)~MP,data=data)
-summary(model.1.log)
-lrtest(model.0.log,model.1.log)
-
-model.2.log=lm(log(1+alldeaths)~MP+NDAM+MFI,data=data)
-summary(model.2.log)
-lrtest(model.0.log,model.2.log)
-
-model.3.log=lm(log(1+alldeaths)~ZMP+ZNDAM+ZMFI+ZMFI*ZMP+ZMFI*ZNDAM,data=data)
-summary(model.3.log)
-lrtest(model.0.log,model.3.log)
-
-# Gender_MF instead of MFI ####
-model.3.dummy=glm.nb(alldeaths~MP+NDAM+Gender_MF+Gender_MF*MP+Gender_MF*NDAM,data=data)
-summary(model.3.dummy)
-lrtest(model.0,model.3.dummy)
-
-model.4.dummy=glm.nb(alldeaths~ZMP+ZNDAM+Gender_MF+Gender_MF*ZMP+Gender_MF*ZNDAM,data=data)
-summary(model.4.dummy)
-lrtest(model.0,model.4.dummy)
-data[,"fit.4.dummy"]=fitted.values(model.4.dummy)
-summary(data$fit.4.dummy) # NOTE: two fitted values are STILL much larger than max in data! 
-data %>% arrange(desc(fit.4.dummy)) %>% head() 
-
-# EXCLUDE NDAM (endogenous?!) and replace it by 'Category' ####
-# Category is not defined in the paper, but here: https://en.wikipedia.org/wiki/Saffir%E2%80%93Simpson_scale 
-model.2.cat=glm.nb(alldeaths~ZMP+Category+ZMFI,data=data)
-summary(model.2.cat)
-lrtest(model.0,model.2.cat)
-
-model.3.cat=glm.nb(alldeaths~ZMP+Category+ZMFI+ZMFI*ZMP+ZMFI*Category,data=data)
-summary(model.3.cat)
-lrtest(model.0,model.3.cat)
-
-model.4.cat=glm.nb(alldeaths~ZMP+Category+ZMFI+ZMFI*ZMP+ZMFI*Category,data=data.scaled)
-summary(model.4.cat)
-lrtest(model.0,model.4.cat)
-data[,"fit.4.cat"]=fitted.values(model.4.cat)
-summary(data$fit.4.cat)
-
-data.actual=cbind(data[,c("alldeaths","MFI")],"actual");names(data.actual)=c("alldeaths","MFI","type")
-data.fitted=cbind(data[,c("fit.4.cat","MFI")],"fitted");names(data.fitted)=c("alldeaths","MFI","type")
-data.4.plot=rbind(data.actual,data.fitted)
-plt=ggplot(data.4.plot, aes(x=MFI,y=alldeaths,col=type) ) + geom_point()
-plt = plt + scale_y_continuous(trans='log',limits=c(1,round(max(data$fit.4),-3))) 
-plt
